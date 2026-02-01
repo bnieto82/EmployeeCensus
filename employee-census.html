@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Census Data</title>
+    
+    <!-- Microsoft Teams JavaScript SDK -->
+    <script src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js" crossorigin="anonymous"></script>
+    
+    <!-- Microsoft Authentication Library (for SharePoint - optional) -->
+    <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 30px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .file-info {
+            font-size: 14px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .file-upload {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload label, .file-upload button {
+            padding: 7px 14px;
+            background: white;
+            color: #667eea;
+            border: 2px solid white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .file-upload label:hover, .file-upload button:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .file-name {
+            color: white;
+            font-size: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #e0e0e0;
+            gap: 3px;
+            padding: 3px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px 18px;
+            text-align: center;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar for Filters */
+        .sidebar {
+            width: 280px;
+            background: #f8f9fa;
+            border-right: 2px solid #e0e0e0;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* Custom scrollbar for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #e0e0e0;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+
+        .sidebar h3 {
+            font-size: 13px;
+            color: #667eea;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .global-filter-search {
+            margin-bottom: 15px;
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            padding-bottom: 10px;
+            z-index: 10;
+        }
+
+        .global-filter-search input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .global-filter-search input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .global-filter-search input::placeholder {
+            color: #999;
+        }
+
+        .day-range-filter {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .day-range-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+
+        .day-range-display {
+            flex: 1;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .day-range-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 4px 8px;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        .day-range-btn:hover {
+            color: #5568d3;
+            transform: scale(1.3);
+        }
+
+        .filter {
+            margin-bottom: 20px;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .filter label {
+            display: block;
+            font-size: 10px;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-count {
+            background: #667eea;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .filter-list {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .filter-item {
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .filter-item:last-child {
+            border-bottom: none;
+        }
+
+        .filter-item:hover {
+            background: #f8f9fa;
+        }
+
+        .filter-item.hidden {
+            display: none;
+        }
+
+        .filter-item input[type="checkbox"] {
+            cursor: pointer;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .filter-item label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 10px;
+            color: #333;
+            margin: 0;
+            text-transform: none;
+            letter-spacing: normal;
+            font-weight: 500;
+        }
+
+        /* Custom scrollbar for filter lists */
+        .filter-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .filter-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .filter-list::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+
+        .filter-list::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+
+        /* Right Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .applied-filters-top {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .applied-filters-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .applied-filters-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #667eea;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-tag {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-tag-close {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 0 2px;
+        }
+
+        .filter-tag-close:hover {
+            transform: scale(1.2);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn-default {
+            background: #667eea;
+            color: white;
+        }
+
+        .filter-btn-default:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .filter-btn-clear {
+            background: #dc3545;
+            color: white;
+        }
+
+        .filter-btn-clear:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .search-controls {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .search-box label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .stats {
+            padding: 10px 20px;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-info {
+            font-size: 13px;
+            color: #555;
+        }
+
+        .stats-info strong {
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 7px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        th {
+            padding: 12px 15px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        th:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        th.sortable::after {
+            content: ' ↕';
+            opacity: 0.4;
+            font-size: 10px;
+        }
+
+        th.sort-asc::after {
+            content: ' ▲';
+            opacity: 1;
+            font-size: 10px;
+        }
+
+        th.sort-desc::after {
+            content: ' ▼';
+            opacity: 1;
+            font-size: 10px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background: #f0f4ff;
+            transform: scale(1.005);
+        }
+
+        td {
+            padding: 12px 15px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .loading, .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-terminated {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-leave {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-retired {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-deceased {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 3% auto;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1200px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            position: relative;
+        }
+
+        .modal-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            padding-right: 40px;
+        }
+
+        .modal-title-row h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .modal-title-row .status-badge {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .close:hover {
+            transform: scale(1.2);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .modal-header-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modal-header-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .modal-header-row-main {
+            justify-content: space-between;
+        }
+
+        .modal-header-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .modal-header-item-flex {
+            flex: 1;
+        }
+
+        .modal-header-label {
+            font-size: 10px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .modal-header-value {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .modal-header-status {
+            font-size: 13px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .modal-contact-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .modal-contact-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 12px;
+            border-radius: 6px;
+            flex: 1;
+        }
+
+        .modal-contact-label {
+            font-size: 10px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .modal-contact-value {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .modal-timeline-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .modal-timeline-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 12px;
+            border-radius: 6px;
+            flex: 1;
+        }
+
+        .modal-timeline-label {
+            font-size: 10px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .modal-timeline-value {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 25px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .detail-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .detail-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .detail-section h3 {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 140px 1fr auto;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+            align-items: center;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-row-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-row-value {
+            font-size: 13px;
+            color: #000;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        .copy-icon {
+            cursor: pointer;
+            color: #667eea;
+            font-size: 14px;
+            padding: 4px;
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+
+        .copy-icon:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .copy-icon:active {
+            color: #28a745;
+        }
+
+        /* Copy Modal */
+        .copy-display {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .copy-display textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .copy-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .copy-notice {
+            color: #28a745;
+            font-weight: 600;
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
+            .detail-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 2px solid #e0e0e0;
+            }
+
+            .modal-title-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .modal-header-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .modal-header-item {
+                width: 100%;
+            }
+
+            .modal-contact-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .modal-timeline-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .detail-row {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+
+            .modal-content {
+                width: 98%;
+                margin: 5% auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>Employee Census Data</h1>
+                <div class="file-info" id="fileInfo">Please select a file or connect to SharePoint</div>
+            </div>
+            <div class="file-upload">
+                <input type="file" id="csvFileInput" accept=".csv">
+                <label for="csvFileInput">📁 Select CSV File</label>
+                <button id="sharePointBtn" onclick="handleSharePointClick()">☁️ SharePoint</button>
+                <span class="file-name" id="fileName"></span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="all">All Employees</button>
+            <button class="tab" data-tab="newHires">New Hires</button>
+            <button class="tab" data-tab="terminations">Terminations</button>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Sidebar for Filters -->
+            <div class="sidebar">
+                <h3>Filters</h3>
+                <div class="global-filter-search">
+                    <input type="text" id="globalFilterSearch" placeholder="🔍 Search all filters..." oninput="globalSearchFilters(this.value)">
+                </div>
+                
+                <!-- Day Range Filter (only visible on New Hires and Terminations tabs) -->
+                <div class="day-range-filter" id="dayRangeFilter" style="display: none;">
+                    <div class="filter-header">
+                        <label id="dayRangeLabel">Date Range</label>
+                    </div>
+                    <div class="day-range-control">
+                        <button class="day-range-btn" onclick="adjustDays('dayRange', -1)">−</button>
+                        <div class="day-range-display">
+                            <span id="dayRangeText">Last 5 days</span>
+                            <input type="hidden" id="dayRange" value="5">
+                        </div>
+                        <button class="day-range-btn" onclick="adjustDays('dayRange', 1)">+</button>
+                    </div>
+                </div>
+                
+                <div id="filterGroup">
+                    <!-- Filters will be generated dynamically -->
+                </div>
+            </div>
+
+            <!-- Right Content Area -->
+            <div class="content-area">
+                <!-- Applied Filters - Always Visible -->
+                <div class="applied-filters-top">
+                    <div class="applied-filters-content">
+                        <span class="applied-filters-label">ACTIVE FILTERS:</span>
+                        <div id="filterTags"></div>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn filter-btn-default" id="defaultBtn" title="Set to Active + Leave">Default Filters</button>
+                        <button class="filter-btn filter-btn-clear" id="clearBtn" title="Clear all filters">Clear Filters</button>
+                    </div>
+                </div>
+
+                <div class="search-controls">
+                    <div class="search-box">
+                        <label for="searchInput">Search</label>
+                        <input type="text" id="searchInput" placeholder="🔍 Search by name, job title, location, department...">
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stats-info">
+                        Showing <strong id="displayCount">0</strong> of <strong id="totalCount">0</strong> employees
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-success" id="emailBtn">📧 Copy Emails</button>
+                        <button class="btn btn-info" id="namesBtn">👤 Copy Names</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="employeeTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="name">Name</th>
+                                <th class="sortable" data-column="jobTitle">Job Title</th>
+                                <th class="sortable" data-column="status">Status</th>
+                                <th class="sortable" data-column="location">Location</th>
+                                <th class="sortable" data-column="department">Department</th>
+                                <th class="sortable" data-column="manager">Manager</th>
+                                <th class="sortable" data-column="hireDate">Hire Date</th>
+                                <th class="sortable" data-column="rehireDate">Rehire Date</th>
+                                <th class="sortable" data-column="termDate">Term Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr>
+                                <td colspan="9" class="loading">Please select your CSV file above to view employee data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Detail Modal -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeEmployeeModal()">&times;</span>
+                <div class="modal-title-row">
+                    <h2 id="modalEmployeeName">Employee Details</h2>
+                    <span id="modalEmployeeStatus" class="status-badge"></span>
+                </div>
+                <div class="modal-header-grid" id="modalHeaderContent">
+                    <!-- Header content will be populated here -->
+                </div>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Modal -->
+    <div id="copyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeCopyModal()">&times;</span>
+                <div class="modal-title-row">
+                    <h2 id="copyModalTitle">Copy Data</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="copyModalDescription"></p>
+                <div class="copy-display">
+                    <textarea id="copyList" readonly></textarea>
+                    <div class="copy-actions">
+                        <button class="btn" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+                        <span class="copy-notice" id="copyNotice">✓ Copied!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SharePoint Configuration Modal -->
+    <div id="sharePointModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeSharePointModal()">&times;</span>
+                <div class="modal-title-row">
+                    <h2>Load from SharePoint</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">SharePoint Site URL:</label>
+                    <input type="text" id="spSiteUrl" placeholder="https://yourtenant.sharepoint.com/sites/yoursite" 
+                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;">
+                    <div style="font-size: 11px; color: #999; margin-top: 4px;">Example: https://contoso.sharepoint.com/sites/HR</div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Document Library Name:</label>
+                    <input type="text" id="spLibraryName" value="Documents" placeholder="Documents" 
+                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;">
+                    <div style="font-size: 11px; color: #999; margin-top: 4px;">Usually "Documents" or "Shared Documents"</div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">File Path:</label>
+                    <input type="text" id="spFilePath" placeholder="folder/employee_census.csv" 
+                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;">
+                    <div style="font-size: 11px; color: #999; margin-top: 4px;">Path to your CSV file within the library (e.g., HR/census.csv)</div>
+                </div>
+                
+                <div id="spStatus" style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 12px;"></div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn secondary" onclick="closeSharePointModal()">Cancel</button>
+                    <button class="btn" onclick="loadFromSharePoint()">Load Data</button>
+                    <button class="btn" onclick="refreshSharePointData()" title="Refresh using last configuration">🔄 Refresh</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Microsoft Teams
+        let teamsContext = null;
+        
+        // Check if running in Teams
+        if (typeof microsoftTeams !== 'undefined') {
+            microsoftTeams.app.initialize().then(() => {
+                microsoftTeams.app.getContext().then((context) => {
+                    teamsContext = context;
+                    console.log('Teams context:', context);
+                    // Notify Teams that app is ready
+                    microsoftTeams.app.notifySuccess();
+                });
+            }).catch((error) => {
+                console.error('Teams initialization error:', error);
+            });
+        }
+        
+        // SharePoint / MSAL Configuration
+        let msalInstance = null;
+        let accessToken = null;
+        let sharePointConfig = {
+            siteUrl: '',
+            libraryName: 'Documents',
+            filePath: ''
+        };
+        
+        const msalConfig = {
+            auth: {
+                clientId: 'e2232fa2-f3a5-4b73-ba38-c23c07a2e966', // REPLACE THIS with your Azure AD App Client ID
+                authority: 'https://login.microsoftonline.com/common',
+                redirectUri: window.location.origin + window.location.pathname
+            },
+            cache: {
+                cacheLocation: 'localStorage',
+                storeAuthStateInCookie: false
+            }
+        };
+        
+        const loginRequest = {
+            scopes: ['User.Read', 'Sites.Read.All', 'Files.Read.All']
+        };
+        
+        let employeeData = [];
+        let filteredData = [];
+        let currentTab = 'all';
+        let filterSelections = {};
+        let allHeaders = [];
+        let sortState = { column: 'name', direction: 'asc' }; // Default sort by name
+
+        const filterConfigs = [
+            { id: 'status', label: 'Status', field: 'Position Status' },
+            { id: 'location', label: 'Location', field: 'Location Description' },
+            { id: 'category', label: 'Category', field: 'Worker Category Description' },
+            { id: 'department', label: 'Department', field: 'Home Department Description' },
+            { id: 'manager', label: 'Manager', field: 'Reports To Name' },
+            { id: 'businessUnit', label: 'Business Unit', field: 'Business Unit Description' },
+            { id: 'jobTitle', label: 'Job Title', field: 'Job Title Description' },
+            { id: 'jobClass', label: 'Job Class', field: 'Job Class Description' }
+        ];
+
+        // Column mapping for sorting
+        const columnMapping = {
+            'name': null, // special case - needs full name construction
+            'jobTitle': 'Job Title Description',
+            'status': 'Position Status',
+            'location': 'Location Description',
+            'department': 'Home Department Description',
+            'manager': 'Reports To Name',
+            'hireDate': 'Hire Date',
+            'rehireDate': 'Hire/Rehire Date',
+            'termDate': 'Termination Date'
+        };
+
+        filterConfigs.forEach(config => {
+            filterSelections[config.id] = [];
+        });
+
+        function adjustDays(inputId, change) {
+            const input = document.getElementById(inputId);
+            let currentValue = parseInt(input.value) || 5;
+            let newValue = currentValue + change;
+            
+            // Keep between 1 and 365
+            if (newValue < 1) newValue = 1;
+            if (newValue > 365) newValue = 365;
+            
+            input.value = newValue;
+            document.getElementById('dayRangeText').textContent = `Last ${newValue} day${newValue === 1 ? '' : 's'}`;
+            
+            // Trigger filter update
+            applyFilters();
+        }
+
+        function getStatusClass(status) {
+            if (!status) return '';
+            const statusLower = status.toLowerCase();
+            if (statusLower === 'active') return 'status-active';
+            if (statusLower === 'terminated') return 'status-terminated';
+            if (statusLower === 'leave') return 'status-leave';
+            if (statusLower === 'retired') return 'status-retired';
+            if (statusLower === 'deceased') return 'status-deceased';
+            return '';
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = parseCSVLine(lines[0]);
+            allHeaders = headers;
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+                const values = parseCSVLine(lines[i]);
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                data.push(row);
+            }
+
+            return data;
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                const nextChar = line[i + 1];
+
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current.trim());
+            return result;
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[0] - 1, parts[1]);
+            }
+            return null;
+        }
+
+        function isWithinDays(dateStr, days) {
+            const date = parseDate(dateStr);
+            if (!date) return false;
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const diffTime = today - date;
+            const diffDays = Math.abs(Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+            
+            return diffDays <= days;
+        }
+
+        // ==================== SHAREPOINT FUNCTIONS ====================
+        
+        function initializeMsal() {
+            if (typeof msal === 'undefined') {
+                console.error('MSAL library not loaded');
+                return;
+            }
+            msalInstance = new msal.PublicClientApplication(msalConfig);
+            checkAuthStatus();
+        }
+        
+        async function checkAuthStatus() {
+            if (!msalInstance) return false;
+            
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+                msalInstance.setActiveAccount(accounts[0]);
+                try {
+                    const response = await msalInstance.acquireTokenSilent(loginRequest);
+                    accessToken = response.accessToken;
+                    return true;
+                } catch (error) {
+                    console.log('Silent token acquisition failed:', error);
+                    return false;
+                }
+            }
+            return false;
+        }
+        
+        async function loginToSharePoint() {
+            if (!msalInstance) {
+                initializeMsal();
+            }
+            
+            try {
+                const response = await msalInstance.loginPopup(loginRequest);
+                accessToken = response.accessToken;
+                alert('Successfully connected to SharePoint!');
+                showSharePointConfig();
+                return true;
+            } catch (error) {
+                console.error('Login failed:', error);
+                alert('Login failed: ' + error.message);
+                return false;
+            }
+        }
+        
+        async function callGraphAPI(endpoint) {
+            if (!accessToken) {
+                throw new Error('Not authenticated. Please login first.');
+            }
+            
+            const response = await fetch(endpoint, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+            }
+            
+            return await response.json();
+        }
+        
+        function extractSiteFromUrl(url) {
+            try {
+                const match = url.match(/sharepoint\.com\/sites\/([^\/]+)/);
+                if (match) {
+                    const hostname = new URL(url).hostname;
+                    return `${hostname}:/sites/${match[1]}`;
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        }
+        
+        async function loadFromSharePoint() {
+            const siteUrl = document.getElementById('spSiteUrl').value.trim();
+            const libraryName = document.getElementById('spLibraryName').value.trim() || 'Documents';
+            const filePath = document.getElementById('spFilePath').value.trim();
+            const statusDiv = document.getElementById('spStatus');
+            
+            if (!siteUrl || !filePath) {
+                statusDiv.innerHTML = '<span style="color: red;">Please enter both Site URL and File Path</span>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<span style="color: #667eea;">Loading data from SharePoint...</span>';
+            
+            try {
+                // Get site ID
+                const siteIdentifier = extractSiteFromUrl(siteUrl);
+                if (!siteIdentifier) {
+                    throw new Error('Invalid SharePoint site URL format');
+                }
+                
+                const siteResponse = await callGraphAPI(`https://graph.microsoft.com/v1.0/sites/${siteIdentifier}`);
+                const siteId = siteResponse.id;
+                
+                // Get drive ID
+                const drivesResponse = await callGraphAPI(`https://graph.microsoft.com/v1.0/sites/${siteId}/drives`);
+                const targetDrive = drivesResponse.value.find(d => d.name === libraryName);
+                
+                if (!targetDrive) {
+                    throw new Error(`Document library "${libraryName}" not found`);
+                }
+                
+                const driveId = targetDrive.id;
+                
+                // Get file content
+                const fileEndpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${filePath}:/content`;
+                const fileResponse = await fetch(fileEndpoint, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (!fileResponse.ok) {
+                    throw new Error(`Failed to load file: ${fileResponse.status} ${fileResponse.statusText}`);
+                }
+                
+                const csvText = await fileResponse.text();
+                
+                // Parse and load data
+                employeeData = parseCSV(csvText);
+                filteredData = employeeData;
+                initializeFilters();
+                renderTable();
+                
+                // Update UI
+                document.getElementById('fileInfo').textContent = filePath.split('/').pop();
+                statusDiv.innerHTML = '<span style="color: green;">✓ Data loaded successfully! ' + employeeData.length + ' records found.</span>';
+                
+                // Save config for refresh
+                sharePointConfig = { siteUrl, libraryName, filePath };
+                
+                // Close modal after short delay
+                setTimeout(() => {
+                    closeSharePointModal();
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error loading from SharePoint:', error);
+                statusDiv.innerHTML = '<span style="color: red;">Error: ' + error.message + '</span>';
+            }
+        }
+        
+        async function refreshSharePointData() {
+            if (!sharePointConfig.siteUrl || !sharePointConfig.filePath) {
+                alert('Please load data from SharePoint first');
+                return;
+            }
+            
+            // Temporarily set the values
+            document.getElementById('spSiteUrl').value = sharePointConfig.siteUrl;
+            document.getElementById('spLibraryName').value = sharePointConfig.libraryName;
+            document.getElementById('spFilePath').value = sharePointConfig.filePath;
+            
+            await loadFromSharePoint();
+        }
+        
+        function showSharePointConfig() {
+            document.getElementById('sharePointModal').style.display = 'block';
+        }
+        
+        function closeSharePointModal() {
+            document.getElementById('sharePointModal').style.display = 'none';
+        }
+        
+        async function handleSharePointClick() {
+            const isAuthenticated = await checkAuthStatus();
+            
+            if (!isAuthenticated) {
+                const login = confirm('You need to connect to SharePoint first. Connect now?');
+                if (login) {
+                    const success = await loginToSharePoint();
+                    if (!success) return;
+                }
+            } else {
+                showSharePointConfig();
+            }
+        }
+        
+        // ==================== END SHAREPOINT FUNCTIONS ====================
+
+
+        function getFullName(employee) {
+            return `${employee['First Name'] || ''} ${employee['Middle Name'] || ''} ${employee['Last Name'] || ''}`.trim();
+        }
+
+        function sortData() {
+            if (!sortState.column) return;
+
+            filteredData.sort((a, b) => {
+                let valueA, valueB;
+
+                if (sortState.column === 'name') {
+                    valueA = getFullName(a).toLowerCase();
+                    valueB = getFullName(b).toLowerCase();
+                } else {
+                    const field = columnMapping[sortState.column];
+                    valueA = a[field] || '';
+                    valueB = b[field] || '';
+
+                    // Handle date columns
+                    if (sortState.column === 'hireDate' || sortState.column === 'rehireDate' || sortState.column === 'termDate') {
+                        const dateA = parseDate(valueA);
+                        const dateB = parseDate(valueB);
+                        if (dateA && dateB) {
+                            return sortState.direction === 'asc' ? dateA - dateB : dateB - dateA;
+                        } else if (dateA) {
+                            return sortState.direction === 'asc' ? -1 : 1;
+                        } else if (dateB) {
+                            return sortState.direction === 'asc' ? 1 : -1;
+                        }
+                        return 0;
+                    }
+
+                    valueA = valueA.toString().toLowerCase();
+                    valueB = valueB.toString().toLowerCase();
+                }
+
+                if (valueA < valueB) return sortState.direction === 'asc' ? -1 : 1;
+                if (valueA > valueB) return sortState.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function updateSortHeaders() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.column === sortState.column) {
+                    th.classList.add(sortState.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+
+        function loadCSVFromFile(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const text = e.target.result;
+                
+                const fileDate = new Date(file.lastModified);
+                document.getElementById('fileInfo').textContent = 
+                    `📅 Last Updated: ${fileDate.toLocaleDateString()} at ${fileDate.toLocaleTimeString()}`;
+                document.getElementById('fileName').textContent = `✓ ${file.name}`;
+
+                employeeData = parseCSV(text);
+                filteredData = [...employeeData];
+                
+                createFilters();
+                setDefaultFilters();
+                applyFilters();
+                
+                // Re-initialize event listeners to ensure they work after data load
+                initializeEventListeners();
+            };
+            
+            reader.onerror = function() {
+                document.getElementById('tableBody').innerHTML = 
+                    '<tr><td colspan="9" class="no-results">Error reading file. Please try again.</td></tr>';
+            };
+            
+            reader.readAsText(file);
+        }
+
+        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                loadCSVFromFile(file);
+            }
+        });
+
+        function setDefaultFilters() {
+            const statuses = ['Active', 'Leave'];
+            const availableStatuses = [...new Set(employeeData.map(e => e['Position Status']).filter(s => s))];
+            
+            filterSelections['status'] = [];
+            statuses.forEach(status => {
+                if (availableStatuses.includes(status)) {
+                    filterSelections['status'].push(status);
+                    
+                    const checkbox = document.getElementById(`status-${status.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                }
+            });
+            
+            updateFilterCount('status');
+            updateAppliedFilters();
+        }
+
+        function createFilters() {
+            const filterGroup = document.getElementById('filterGroup');
+            filterGroup.innerHTML = '';
+
+            filterConfigs.forEach(config => {
+                const uniqueValues = [...new Set(employeeData.map(e => e[config.field]).filter(v => v))].sort();
+                
+                const filterDiv = document.createElement('div');
+                filterDiv.className = 'filter';
+                filterDiv.innerHTML = `
+                    <div class="filter-header">
+                        <label>${config.label}</label>
+                        <span class="filter-count" id="count-${config.id}" style="display: none;">0</span>
+                    </div>
+                    <div class="filter-list" id="list-${config.id}">
+                        ${uniqueValues.map(value => `
+                            <div class="filter-item" data-value="${value.toLowerCase()}" data-filter="${config.id}">
+                                <input type="checkbox" id="${config.id}-${value.replace(/[^a-zA-Z0-9]/g, '_')}" 
+                                       onchange="updateFilter('${config.id}', '${value.replace(/'/g, "\\'")}', this.checked)">
+                                <label for="${config.id}-${value.replace(/[^a-zA-Z0-9]/g, '_')}">${value}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                filterGroup.appendChild(filterDiv);
+            });
+        }
+
+        function globalSearchFilters(searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            const allFilterItems = document.querySelectorAll('.filter-item');
+            
+            allFilterItems.forEach(item => {
+                const value = item.getAttribute('data-value');
+                if (value.includes(searchLower)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        }
+
+        function updateFilter(filterId, value, checked) {
+            if (checked) {
+                if (!filterSelections[filterId].includes(value)) {
+                    filterSelections[filterId].push(value);
+                }
+            } else {
+                filterSelections[filterId] = filterSelections[filterId].filter(v => v !== value);
+            }
+            
+            updateFilterCount(filterId);
+            updateAppliedFilters();
+            applyFilters();
+        }
+
+        function updateFilterCount(filterId) {
+            const count = filterSelections[filterId].length;
+            const countBadge = document.getElementById(`count-${filterId}`);
+            
+            if (count > 0) {
+                countBadge.textContent = count;
+                countBadge.style.display = 'inline-block';
+            } else {
+                countBadge.style.display = 'none';
+            }
+        }
+
+        function updateAppliedFilters() {
+            const filterTags = document.getElementById('filterTags');
+            filterTags.innerHTML = '';
+
+            filterConfigs.forEach(config => {
+                filterSelections[config.id].forEach(value => {
+                    const tag = document.createElement('span');
+                    tag.className = 'filter-tag';
+                    tag.innerHTML = `
+                        ${config.label}: ${value}
+                        <span class="filter-tag-close" onclick="removeFilter('${config.id}', '${value.replace(/'/g, "\\'")}')">×</span>
+                    `;
+                    filterTags.appendChild(tag);
+                });
+            });
+        }
+
+        function removeFilter(filterId, value) {
+            filterSelections[filterId] = filterSelections[filterId].filter(v => v !== value);
+            
+            const checkbox = document.querySelector(`#${filterId}-${value.replace(/[^a-zA-Z0-9]/g, '_')}`);
+            if (checkbox) checkbox.checked = false;
+            
+            updateFilterCount(filterId);
+            updateAppliedFilters();
+            applyFilters();
+        }
+
+        // Tab click handler with filter clearing for New Hires and Terminations
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                currentTab = this.dataset.tab;
+                
+                // Show/hide day range filter based on tab
+                const dayRangeFilter = document.getElementById('dayRangeFilter');
+                const dayRangeLabel = document.getElementById('dayRangeLabel');
+                
+                if (currentTab === 'newHires') {
+                    dayRangeFilter.style.display = 'block';
+                    dayRangeLabel.textContent = 'Hire Date Range';
+                } else if (currentTab === 'terminations') {
+                    dayRangeFilter.style.display = 'block';
+                    dayRangeLabel.textContent = 'Termination Date Range';
+                } else {
+                    dayRangeFilter.style.display = 'none';
+                }
+                
+                // Clear all filters when switching to New Hires or Terminations tabs
+                if (currentTab === 'newHires' || currentTab === 'terminations') {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('globalFilterSearch').value = '';
+                    
+                    filterConfigs.forEach(config => {
+                        filterSelections[config.id] = [];
+                        updateFilterCount(config.id);
+                        document.querySelectorAll(`[id^="${config.id}-"]`).forEach(checkbox => {
+                            checkbox.checked = false;
+                        });
+                    });
+                    
+                    // Show all filter items
+                    document.querySelectorAll('.filter-item').forEach(item => {
+                        item.classList.remove('hidden');
+                    });
+                    
+                    updateAppliedFilters();
+                }
+                
+                applyFilters();
+            });
+        });
+
+        document.getElementById('hireDays').addEventListener('change', function() {
+            if (currentTab === 'newHires') {
+                applyFilters();
+            }
+        });
+
+        document.getElementById('termDays').addEventListener('change', function() {
+            if (currentTab === 'terminations') {
+                applyFilters();
+            }
+        });
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const dayRange = parseInt(document.getElementById('dayRange').value) || 5;
+
+            filteredData = employeeData.filter(employee => {
+                // Tab-specific filtering
+                if (currentTab === 'newHires') {
+                    if (!isWithinDays(employee['Hire/Rehire Date'], dayRange)) return false;
+                } else if (currentTab === 'terminations') {
+                    // Only show terminated employees
+                    const status = (employee['Position Status'] || '').toLowerCase();
+                    if (status !== 'terminated') return false;
+                    if (!isWithinDays(employee['Termination Date'], dayRange)) return false;
+                }
+
+                if (searchTerm) {
+                    const searchableFields = Object.keys(employee).filter(key => key !== 'Reports To Name');
+                    const matchesSearch = searchableFields.some(field => {
+                        const value = employee[field];
+                        return value && value.toString().toLowerCase().includes(searchTerm);
+                    });
+                    if (!matchesSearch) return false;
+                }
+
+                let matchesFilters = true;
+                filterConfigs.forEach(config => {
+                    if (filterSelections[config.id].length > 0) {
+                        if (!filterSelections[config.id].includes(employee[config.field])) {
+                            matchesFilters = false;
+                        }
+                    }
+                });
+
+                return matchesFilters;
+            });
+
+            // Special sorting for New Hires and Terminations tabs
+            if (currentTab === 'newHires') {
+                filteredData.sort((a, b) => {
+                    const dateA = parseDate(a['Hire/Rehire Date']);
+                    const dateB = parseDate(b['Hire/Rehire Date']);
+                    return dateB - dateA;
+                });
+            } else if (currentTab === 'terminations') {
+                filteredData.sort((a, b) => {
+                    const dateA = parseDate(a['Termination Date']);
+                    const dateB = parseDate(b['Termination Date']);
+                    return dateB - dateA;
+                });
+            } else {
+                // Apply column sorting for All Employees tab
+                sortData();
+            }
+
+            updateSortHeaders();
+            displayData();
+            updateStats();
+        }
+
+        function displayData() {
+            const tbody = document.getElementById('tableBody');
+            
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="no-results">No employees found matching your criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredData.map((employee, index) => {
+                const fullName = getFullName(employee);
+                const status = employee['Position Status'] || '';
+                const statusClass = getStatusClass(status);
+                
+                return `
+                    <tr onclick="showEmployeeDetails(${index})">
+                        <td>${fullName}</td>
+                        <td>${employee['Job Title Description'] || '-'}</td>
+                        <td><span class="status-badge ${statusClass}">${status || '-'}</span></td>
+                        <td>${employee['Location Description'] || '-'}</td>
+                        <td>${employee['Home Department Description'] || '-'}</td>
+                        <td>${employee['Reports To Name'] || '-'}</td>
+                        <td>${employee['Hire Date'] || '-'}</td>
+                        <td>${employee['Hire/Rehire Date'] || '-'}</td>
+                        <td>${employee['Termination Date'] || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Add click handlers to table headers for sorting
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', function() {
+                const column = this.dataset.column;
+                
+                // Only allow sorting on All Employees tab
+                if (currentTab !== 'all') return;
+                
+                if (sortState.column === column) {
+                    // Toggle direction
+                    sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // New column, default to ascending
+                    sortState.column = column;
+                    sortState.direction = 'asc';
+                }
+                
+                sortData();
+                updateSortHeaders();
+                displayData();
+            });
+        });
+
+        function copyField(value, element) {
+            navigator.clipboard.writeText(value).then(() => {
+                element.style.color = '#28a745';
+                setTimeout(() => {
+                    element.style.color = '#667eea';
+                }, 500);
+            });
+        }
+
+        function showEmployeeDetails(index) {
+            const employee = filteredData[index];
+            const fullName = getFullName(employee);
+            const status = employee['Position Status'] || '-';
+            const statusClass = getStatusClass(status);
+            
+            document.getElementById('modalEmployeeName').textContent = fullName;
+            
+            // Set status badge next to name
+            const statusBadge = document.getElementById('modalEmployeeStatus');
+            statusBadge.textContent = status;
+            statusBadge.className = `status-badge ${statusClass}`;
+            
+            // New header layout
+            const headerContent = document.getElementById('modalHeaderContent');
+            headerContent.innerHTML = `
+                <div class="modal-header-row modal-header-row-main">
+                    <div class="modal-header-item modal-header-item-flex">
+                        <div class="modal-header-label">Job Title</div>
+                        <div class="modal-header-value">${employee['Job Title Description'] || '-'}</div>
+                    </div>
+                    <div class="modal-header-item modal-header-item-flex">
+                        <div class="modal-header-label">Department</div>
+                        <div class="modal-header-value">${employee['Home Department Description'] || '-'}</div>
+                    </div>
+                    <div class="modal-header-item modal-header-item-flex">
+                        <div class="modal-header-label">Manager</div>
+                        <div class="modal-header-value">${employee['Reports To Name'] || '-'}</div>
+                    </div>
+                </div>
+                <div class="modal-contact-row">
+                    <div class="modal-contact-item">
+                        <div class="modal-contact-label">Work Email</div>
+                        <div class="modal-contact-value">${employee['Work Contact: Work Email'] || '-'}</div>
+                    </div>
+                    <div class="modal-contact-item">
+                        <div class="modal-contact-label">Personal Email</div>
+                        <div class="modal-contact-value">${employee['Personal Contact: Personal Email'] || '-'}</div>
+                    </div>
+                </div>
+                <div class="modal-contact-row">
+                    <div class="modal-contact-item">
+                        <div class="modal-contact-label">Work Mobile</div>
+                        <div class="modal-contact-value">${employee['Work Contact: Work Mobile'] || '-'}</div>
+                    </div>
+                    <div class="modal-contact-item">
+                        <div class="modal-contact-label">Personal Mobile</div>
+                        <div class="modal-contact-value">${employee['Personal Contact: Personal Mobile'] || '-'}</div>
+                    </div>
+                </div>
+                <div class="modal-timeline-row">
+                    <div class="modal-timeline-item">
+                        <div class="modal-timeline-label">Hire Date</div>
+                        <div class="modal-timeline-value">${employee['Hire Date'] || '-'}</div>
+                    </div>
+                    <div class="modal-timeline-item">
+                        <div class="modal-timeline-label">Hire/Rehire Date</div>
+                        <div class="modal-timeline-value">${employee['Hire/Rehire Date'] || '-'}</div>
+                    </div>
+                    <div class="modal-timeline-item">
+                        <div class="modal-timeline-label">Termination Date</div>
+                        <div class="modal-timeline-value">${employee['Termination Date'] || '-'}</div>
+                    </div>
+                    <div class="modal-timeline-item">
+                        <div class="modal-timeline-label">Years of Service</div>
+                        <div class="modal-timeline-value">${employee['Years of Service'] || '-'}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Organized sections with logical grouping
+            const modalBody = document.getElementById('modalBody');
+            
+            const personalInfo = [
+                { label: 'Position ID', value: employee['Position ID'] || '-' },
+                { label: 'Associate ID', value: employee['Associate ID'] || '-' },
+                { label: 'File Number', value: employee['File Number'] || '-' },
+                { label: 'Middle Name', value: employee['Middle Name'] || '-' },
+                { label: 'Generation Suffix', value: employee['Generation'] || '-' },
+                { label: 'Preferred Name', value: employee['Preferred or Chosen  Name'] || employee['Preferred or Chosen First Name'] || '-' }
+            ];
+            
+            const addressInfo = [
+                { label: 'Address Line 1', value: employee['Primary Address: Address Line 1'] || '-' },
+                { label: 'Address Line 2', value: employee['Primary Address: Address Line 2'] || '-' },
+                { label: 'Address Line 3', value: employee['Primary Address: Address Line 3'] || '-' },
+                { label: 'City', value: employee['Primary Address: City'] || '-' },
+                { label: 'State', value: employee['Primary Address: State / Territory Description'] || '-' },
+                { label: 'Zip Code', value: employee['Primary Address: Zip / Postal Code'] || '-' }
+            ];
+            
+            const employmentInfo = [
+                { label: 'Business Unit', value: employee['Business Unit Description'] || '-' },
+                { label: 'Location', value: employee['Location Description'] || '-' },
+                { label: 'Worker Category', value: employee['Worker Category Description'] || '-' },
+                { label: 'Benefits Eligibility', value: employee['Benefits Eligibility Class Description'] || '-' },
+                { label: 'Job Class', value: employee['Job Class Description'] || '-' },
+                { label: 'EEOC Classification', value: employee['EEOC Job Classification'] || '-' },
+                { label: 'Payroll Company', value: employee['Payroll Company Code'] || '-' }
+            ];
+            
+            const createSection = (title, items) => {
+                const rows = items.map(item => `
+                    <div class="detail-row">
+                        <div class="detail-row-label">${item.label}</div>
+                        <div class="detail-row-value">${item.value}</div>
+                        <span class="copy-icon" onclick="copyField('${item.value.replace(/'/g, "\\'")}', this)" title="Copy">📋</span>
+                    </div>
+                `).join('');
+                
+                return `
+                    <div class="detail-section">
+                        <h3>${title}</h3>
+                        ${rows}
+                    </div>
+                `;
+            };
+            
+            modalBody.innerHTML = `
+                <div class="detail-sections">
+                    <div>
+                        ${createSection('Personal Information', personalInfo)}
+                        ${createSection('Address', addressInfo)}
+                    </div>
+                    <div>
+                        ${createSection('Employment Details', employmentInfo)}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('employeeModal').style.display = 'block';
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeModal').style.display = 'none';
+        }
+
+        function showEmailModal() {
+            const emails = filteredData
+                .map(e => e['Work Contact: Work Email'])
+                .filter(email => email && email.trim() !== '')
+                .join('; ');
+            
+            document.getElementById('copyModalTitle').textContent = 'Work Email Addresses';
+            document.getElementById('copyModalDescription').textContent = 'Copy these email addresses to paste into Outlook (semicolon-separated):';
+            document.getElementById('copyList').value = emails;
+            document.getElementById('copyModal').style.display = 'block';
+        }
+
+        function showNamesModal() {
+            const names = filteredData
+                .map(e => getFullName(e))
+                .filter(name => name)
+                .join('\n');
+            
+            document.getElementById('copyModalTitle').textContent = 'Employee Names';
+            document.getElementById('copyModalDescription').textContent = 'Copy these employee names (one per line):';
+            document.getElementById('copyList').value = names;
+            document.getElementById('copyModal').style.display = 'block';
+        }
+
+        function closeCopyModal() {
+            document.getElementById('copyModal').style.display = 'none';
+            document.getElementById('copyNotice').style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            const copyText = document.getElementById('copyList');
+            copyText.select();
+            document.execCommand('copy');
+            
+            const notice = document.getElementById('copyNotice');
+            notice.style.display = 'inline';
+            setTimeout(() => {
+                notice.style.display = 'none';
+            }, 2000);
+        }
+
+        function updateStats() {
+            document.getElementById('totalCount').textContent = employeeData.length;
+            document.getElementById('displayCount').textContent = filteredData.length;
+        }
+
+        window.addEventListener('click', function(event) {
+            const employeeModal = document.getElementById('employeeModal');
+            const copyModal = document.getElementById('copyModal');
+            const sharePointModal = document.getElementById('sharePointModal');
+            if (event.target === employeeModal) {
+                closeEmployeeModal();
+            }
+            if (event.target === copyModal) {
+                closeCopyModal();
+            }
+            if (event.target === sharePointModal) {
+                closeSharePointModal();
+            }
+        });
+
+        // Initialize event listeners after DOM is ready
+        function initializeEventListeners() {
+            console.log('Initializing event listeners...');
+            
+            // Main search input
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.removeEventListener('input', applyFilters);
+                searchInput.addEventListener('input', applyFilters);
+                console.log('Main search event listener attached');
+            }
+            
+            // Default Filters button
+            const defaultBtn = document.getElementById('defaultBtn');
+            if (defaultBtn) {
+                defaultBtn.onclick = () => {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('globalFilterSearch').value = '';
+                    
+                    // Clear all filters first
+                    filterConfigs.forEach(config => {
+                        filterSelections[config.id] = [];
+                        updateFilterCount(config.id);
+                        document.querySelectorAll(`[id^="${config.id}-"]`).forEach(checkbox => {
+                            checkbox.checked = false;
+                        });
+                    });
+                    
+                    // Show all filter items
+                    document.querySelectorAll('.filter-item').forEach(item => {
+                        item.classList.remove('hidden');
+                    });
+                    
+                    // Set default filters (Active + Leave)
+                    setDefaultFilters();
+                    applyFilters();
+                };
+                console.log('Default button attached');
+            }
+            
+            // Clear Filters button
+            const clearBtn = document.getElementById('clearBtn');
+            if (clearBtn) {
+                clearBtn.onclick = () => {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('globalFilterSearch').value = '';
+                    
+                    filterConfigs.forEach(config => {
+                        filterSelections[config.id] = [];
+                        updateFilterCount(config.id);
+                        document.querySelectorAll(`[id^="${config.id}-"]`).forEach(checkbox => {
+                            checkbox.checked = false;
+                        });
+                    });
+                    
+                    // Show all filter items
+                    document.querySelectorAll('.filter-item').forEach(item => {
+                        item.classList.remove('hidden');
+                    });
+                    
+                    updateAppliedFilters();
+                    applyFilters();
+                };
+                console.log('Clear button attached');
+            }
+            
+            // Email button
+            const emailBtn = document.getElementById('emailBtn');
+            if (emailBtn) {
+                emailBtn.onclick = showEmailModal;
+                console.log('Email button attached');
+            }
+            
+            // Names button
+            const namesBtn = document.getElementById('namesBtn');
+            if (namesBtn) {
+                namesBtn.onclick = showNamesModal;
+                console.log('Names button attached');
+            }
+        }
+        
+        // Call immediately since script is at bottom of page
+        initializeEventListeners();
+        
+        // Initialize SharePoint/MSAL
+        if (typeof msal !== 'undefined') {
+            initializeMsal();
+        }
+    </script>
+</body>
+</html>
