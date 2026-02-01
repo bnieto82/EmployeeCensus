@@ -962,13 +962,10 @@
         <div class="header">
             <div class="header-left">
                 <h1>Employee Census Data</h1>
-                <div class="file-info" id="fileInfo">Please select a file or connect to SharePoint</div>
+                <div class="file-info" id="fileInfo">Connecting to SharePoint...</div>
             </div>
             <div class="file-upload">
-                <input type="file" id="csvFileInput" accept=".csv">
-                <label for="csvFileInput">📁 Select CSV File</label>
-                <button id="sharePointBtn" onclick="handleSharePointClick()">☁️ SharePoint</button>
-                <span class="file-name" id="fileName"></span>
+                <button id="refreshBtn" onclick="loadFromSharePoint()" style="display: none;">🔄 Refresh Data</button>
             </div>
         </div>
 
@@ -1104,47 +1101,6 @@
         </div>
     </div>
 
-    <!-- SharePoint Configuration Modal -->
-    <div id="sharePointModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span class="close" onclick="closeSharePointModal()">&times;</span>
-                <div class="modal-title-row">
-                    <h2>Load from SharePoint</h2>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">SharePoint Site URL:</label>
-                    <input type="text" id="spSiteUrl" placeholder="https://yourtenant.sharepoint.com/sites/yoursite" 
-                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;">
-                    <div style="font-size: 11px; color: #999; margin-top: 4px;">Example: https://contoso.sharepoint.com/sites/HR</div>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Document Library Name:</label>
-                    <input type="text" id="spLibraryName" value="Documents" placeholder="Documents" 
-                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;">
-                    <div style="font-size: 11px; color: #999; margin-top: 4px;">Usually "Documents" or "Shared Documents"</div>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">File Path:</label>
-                    <input type="text" id="spFilePath" placeholder="folder/employee_census.csv" 
-                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;">
-                    <div style="font-size: 11px; color: #999; margin-top: 4px;">Path to your CSV file within the library (e.g., HR/census.csv)</div>
-                </div>
-                
-                <div id="spStatus" style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 12px;"></div>
-                
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button class="btn secondary" onclick="closeSharePointModal()">Cancel</button>
-                    <button class="btn" onclick="loadFromSharePoint()">Load Data</button>
-                    <button class="btn" onclick="refreshSharePointData()" title="Refresh using last configuration">🔄 Refresh</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script>
         // Initialize Microsoft Teams
@@ -1168,9 +1124,9 @@
         let msalInstance = null;
         let accessToken = null;
         let sharePointConfig = {
-            siteUrl: '',
-            libraryName: 'Documents',
-            filePath: ''
+            siteUrl: 'https://excelin.sharepoint.com',
+            libraryName: 'Employee Census',
+            filePath: 'Employee_Census.csv'
         };
         
         const msalConfig = {
@@ -1349,23 +1305,6 @@
             return false;
         }
         
-        async function loginToSharePoint() {
-            if (!msalInstance) {
-                initializeMsal();
-            }
-            
-            try {
-                const response = await msalInstance.loginPopup(loginRequest);
-                accessToken = response.accessToken;
-                alert('Successfully connected to SharePoint!');
-                showSharePointConfig();
-                return true;
-            } catch (error) {
-                console.error('Login failed:', error);
-                alert('Login failed: ' + error.message);
-                return false;
-            }
-        }
         
         async function callGraphAPI(endpoint) {
             if (!accessToken) {
@@ -1388,35 +1327,29 @@
         
         function extractSiteFromUrl(url) {
             try {
+                const hostname = new URL(url).hostname;
                 const match = url.match(/sharepoint\.com\/sites\/([^\/]+)/);
                 if (match) {
-                    const hostname = new URL(url).hostname;
+                    // Sub-site: https://tenant.sharepoint.com/sites/sitename
                     return `${hostname}:/sites/${match[1]}`;
                 }
-                return null;
+                // Root site: https://tenant.sharepoint.com
+                return `${hostname}:/`;
             } catch (e) {
                 return null;
             }
         }
         
         async function loadFromSharePoint() {
-            const siteUrl = document.getElementById('spSiteUrl').value.trim();
-            const libraryName = document.getElementById('spLibraryName').value.trim() || 'Documents';
-            const filePath = document.getElementById('spFilePath').value.trim();
-            const statusDiv = document.getElementById('spStatus');
+            const { siteUrl, libraryName, filePath } = sharePointConfig;
             
-            if (!siteUrl || !filePath) {
-                statusDiv.innerHTML = '<span style="color: red;">Please enter both Site URL and File Path</span>';
-                return;
-            }
-            
-            statusDiv.innerHTML = '<span style="color: #667eea;">Loading data from SharePoint...</span>';
+            document.getElementById('fileInfo').textContent = 'Loading data...';
             
             try {
                 // Get site ID
                 const siteIdentifier = extractSiteFromUrl(siteUrl);
                 if (!siteIdentifier) {
-                    throw new Error('Invalid SharePoint site URL format');
+                    throw new Error('Invalid SharePoint site URL');
                 }
                 
                 const siteResponse = await callGraphAPI(`https://graph.microsoft.com/v1.0/sites/${siteIdentifier}`);
@@ -1446,62 +1379,38 @@
                 
                 // Parse and load data
                 employeeData = parseCSV(csvText);
-                filteredData = employeeData;
-                initializeFilters();
-                renderTable();
+                filteredData = [...employeeData];
+                
+                createFilters();
+                setDefaultFilters();
+                applyFilters();
+                initializeEventListeners();
                 
                 // Update UI
-                document.getElementById('fileInfo').textContent = filePath.split('/').pop();
-                statusDiv.innerHTML = '<span style="color: green;">✓ Data loaded successfully! ' + employeeData.length + ' records found.</span>';
-                
-                // Save config for refresh
-                sharePointConfig = { siteUrl, libraryName, filePath };
-                
-                // Close modal after short delay
-                setTimeout(() => {
-                    closeSharePointModal();
-                }, 1500);
+                document.getElementById('fileInfo').textContent = `📅 Loaded: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`;
+                document.getElementById('refreshBtn').style.display = 'inline-block';
                 
             } catch (error) {
                 console.error('Error loading from SharePoint:', error);
-                statusDiv.innerHTML = '<span style="color: red;">Error: ' + error.message + '</span>';
+                document.getElementById('fileInfo').textContent = 'Error: ' + error.message;
             }
         }
         
-        async function refreshSharePointData() {
-            if (!sharePointConfig.siteUrl || !sharePointConfig.filePath) {
-                alert('Please load data from SharePoint first');
-                return;
-            }
-            
-            // Temporarily set the values
-            document.getElementById('spSiteUrl').value = sharePointConfig.siteUrl;
-            document.getElementById('spLibraryName').value = sharePointConfig.libraryName;
-            document.getElementById('spFilePath').value = sharePointConfig.filePath;
-            
-            await loadFromSharePoint();
-        }
-        
-        function showSharePointConfig() {
-            document.getElementById('sharePointModal').style.display = 'block';
-        }
-        
-        function closeSharePointModal() {
-            document.getElementById('sharePointModal').style.display = 'none';
-        }
-        
-        async function handleSharePointClick() {
+        async function connectAndLoad() {
             const isAuthenticated = await checkAuthStatus();
             
             if (!isAuthenticated) {
-                const login = confirm('You need to connect to SharePoint first. Connect now?');
-                if (login) {
-                    const success = await loginToSharePoint();
-                    if (!success) return;
+                try {
+                    const response = await msalInstance.loginPopup(loginRequest);
+                    accessToken = response.accessToken;
+                } catch (error) {
+                    console.error('Login failed:', error);
+                    document.getElementById('fileInfo').textContent = 'Login failed. Please refresh and try again.';
+                    return;
                 }
-            } else {
-                showSharePointConfig();
             }
+            
+            await loadFromSharePoint();
         }
         
         // ==================== END SHAREPOINT FUNCTIONS ====================
@@ -1558,42 +1467,6 @@
             });
         }
 
-        function loadCSVFromFile(file) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const text = e.target.result;
-                
-                const fileDate = new Date(file.lastModified);
-                document.getElementById('fileInfo').textContent = 
-                    `📅 Last Updated: ${fileDate.toLocaleDateString()} at ${fileDate.toLocaleTimeString()}`;
-                document.getElementById('fileName').textContent = `✓ ${file.name}`;
-
-                employeeData = parseCSV(text);
-                filteredData = [...employeeData];
-                
-                createFilters();
-                setDefaultFilters();
-                applyFilters();
-                
-                // Re-initialize event listeners to ensure they work after data load
-                initializeEventListeners();
-            };
-            
-            reader.onerror = function() {
-                document.getElementById('tableBody').innerHTML = 
-                    '<tr><td colspan="9" class="no-results">Error reading file. Please try again.</td></tr>';
-            };
-            
-            reader.readAsText(file);
-        }
-
-        document.getElementById('csvFileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                loadCSVFromFile(file);
-            }
-        });
 
         function setDefaultFilters() {
             const statuses = ['Active', 'Leave'];
@@ -2075,15 +1948,11 @@
         window.addEventListener('click', function(event) {
             const employeeModal = document.getElementById('employeeModal');
             const copyModal = document.getElementById('copyModal');
-            const sharePointModal = document.getElementById('sharePointModal');
             if (event.target === employeeModal) {
                 closeEmployeeModal();
             }
             if (event.target === copyModal) {
                 closeCopyModal();
-            }
-            if (event.target === sharePointModal) {
-                closeSharePointModal();
             }
         });
 
@@ -2171,9 +2040,10 @@
         // Call immediately since script is at bottom of page
         initializeEventListeners();
         
-        // Initialize SharePoint/MSAL
+        // Initialize SharePoint/MSAL and auto-load
         if (typeof msal !== 'undefined') {
             initializeMsal();
+            connectAndLoad();
         }
     </script>
 </body>
